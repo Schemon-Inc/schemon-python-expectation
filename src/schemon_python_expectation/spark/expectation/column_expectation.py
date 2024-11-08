@@ -1,8 +1,10 @@
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
     TimestampType, DoubleType, IntegerType, StringType, BooleanType,
     LongType, FloatType, DateType
 )
+import inspect
 
 
 
@@ -76,3 +78,12 @@ class ColumnExpectation:
     def not_null(column: str):
         """Check if column is not null."""
         return F.col(column).isNotNull()
+
+    @classmethod
+    def register_udfs(cls, spark: SparkSession):
+        """Dynamically register each static method in this class as a UDF."""
+        for name, method in inspect.getmembers(cls, predicate=inspect.isfunction):
+            # Ensure the method is a static method
+            if isinstance(getattr(cls, name), staticmethod):
+                # Register the method as a UDF, using its name prefixed with 'udf_'
+                spark.udf.register(f"udf_expectation_{name}", method)
